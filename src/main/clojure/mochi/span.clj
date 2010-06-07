@@ -15,17 +15,25 @@
 
 (defn to-pair [s] [(start s) (stop s)])
 
-(defn contains? [x y] 
+(defn contains? 
+  [x y] 
   (let [[s1 t1] [(start x) (stop x)]
-	[s2 t2] [(start y) (stop y)]]
+	      [s2 t2] [(start y) (stop y)]]
     (and (<= s1 s2) (>= t1 t2))))
 
-(defn intersect [x y]
+(defn intersect 
+  [x y]
   (let [[s1 t1] (to-pair x)
-	[s2 t2] (to-pair y)
-	s (max s1 s2)
-	t (min t1 t2)]
+	      [s2 t2] (to-pair y)
+	      s (max s1 s2)
+	      t (min t1 t2)]
     (when (> t s) [s t])))
+    
+(defn from-elems
+  [& elems] 
+  (when elems
+    [(apply min elems)
+     (inc (apply max elems))]))
          
 (comment
   (start [0 5])

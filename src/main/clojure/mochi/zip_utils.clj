@@ -11,8 +11,7 @@
      (binding [*out* (-> ~zipOut OutputStreamWriter.)] 
        ~@body
        (.flush *out*))
-     (.closeEntry ~zipOut)))
-     
+     (.closeEntry ~zipOut)))     
 
 ;;; Comment 
 

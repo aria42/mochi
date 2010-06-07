@@ -1,4 +1,6 @@
 (ns mochi.cli
+  {:doc "Command-Line-Options Utility"
+   :author "aria42" }
   (:use [mochi core]
         [clojure.contrib duck-streams]))
 

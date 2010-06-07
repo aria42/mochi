@@ -1,4 +1,6 @@
-(ns mochi.array-utils)
+(ns mochi.array-utils
+  { :author "aria42"
+    :doc "Lifted largely from somewhere..."})
 
 (defn array? 
   "is this an array"
@@ -25,19 +27,3 @@
         a-sym (with-meta (gensym "a") {:tag hint})]
       `(let [~a-sym ~nested-array]
          (aset ~a-sym ~idx ~v))))
-
-(defn aset-plus! [arr i & incs]
-  (doseq [inc incs]
-    (aset arr (int i) (+ (aget arr i) inc))))
-
-(defn aset-minus! [arr i & incs]
-  (doseq [inc incs]
-    (aset arr (int i) (- (aget arr i) inc))))
-
-(defn aset-times! [arr i & scales]
-  (doseq [scale scales]
-    (aset arr (int i) (* (aget arr i) scale))))
-
-(defn aset-divide! [arr i & scales]
-  (doseq [scale scales]
-    (aset arr (int i) (/ (aget arr i) scale))))

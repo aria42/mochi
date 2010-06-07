@@ -1,7 +1,6 @@
 (ns mochi.seq-utils
   (:import [java.util.regex Pattern]))
 
-
 (defn iter-seq 
   "Make a seq from input fns
    hasNextFn: no-arg fn to indicate if there is a next

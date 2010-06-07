@@ -5,12 +5,14 @@
 	   [edu.berkeley.nlp.util Numberer])
   (:require [mochi [tree :as tree] [logger :as logger]])
   (:use [clojure.contrib singleton]
-	[mochi core]))
+	[mochi core file-utils]))
 
 (defn #^ParserData load-pdata []
   (logger/track "loading-pdata"
-     (-> "berkeley_models/eng_sm5.gr.gz" 
-	 ClassLoader/getSystemResource .getPath ParserData/Load)))
+     (-> "berkeley_models/eng_sm5.gr.gz" 	 
+	 (resource-to-temp-file ".gr.gz")
+	 .getAbsolutePath
+	 ParserData/Load)))
 
 (def pdata (global-singleton 
   #(doto (load-pdata)

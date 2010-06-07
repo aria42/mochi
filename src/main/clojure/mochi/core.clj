@@ -52,6 +52,10 @@
   [m ks d f & args]
   (update-in m ks (fn [x] (apply f (if x x d) args))))
 
+(defn update-all-in
+  [m ks f & args]
+  (update-in-default m ks (list) (fn [x] (map #(apply f % args) x))))
+
 (defn apply-with-default 
   "same as apply but default argument"
   [f dflt & args]
@@ -189,13 +193,7 @@
 ;;; ------------------------
 
 (comment
-(def c {:a 1})
-(to-transient c)
-(defrecord X [])
-(to-persistent! (to-transient c))
-(map-keys (fn [k] ["a" k]) {"aria" :a "baria" :b})
-(find-maxes {:a 1 :b 2 :c 2} [:a :b :c])
-(to-jlist [:a :b :c ])
+  (update-all-in {:a [1 2 3]} [:a] inc)
 )
 
 

@@ -69,6 +69,7 @@
   (events [this] 
     (for [[k c] counts] 
       [k (laplace-smoothed-prob c lambda (.total counts) numKeys)]))
+      
   (prob [this e] 
     (laplace-smoothed-prob (counts e)
 			   lambda

@@ -1,11 +1,7 @@
 (ns mochi.tree
-  (:use
-    [mochi core seq-utils vec-utils]
-    [clojure.contrib str-utils])
-  (:require
-      [mochi.span :as span]
-      [mochi.tree :as tree]))
-
+  (:use [mochi core seq-utils vec-utils]    
+	[clojure.contrib str-utils])
+  (:require [mochi [span :as span] [tree :as tree]]))
 
 ;;; -------------------------------------------
 ;;; ITree

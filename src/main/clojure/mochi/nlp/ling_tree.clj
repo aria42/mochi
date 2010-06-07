@@ -1,8 +1,6 @@
 (ns mochi.nlp.ling-tree
-  (:require [mochi [span :as span]]
-	    [mochi.nlp [collins-head-rules :as collins]])
-  (:use [mochi tree])
-  (:import [mochi.tree Tree]))
+  (:require [mochi [span :as span] [tree :as tree]]
+            [mochi.nlp [collins-head-rules :as collins]]))
 
 ;;; --------------------------
 ;;; Ling Trees with head info
@@ -14,15 +12,14 @@
   returns tree with :head-info [head-word head-tag head-index] info
   at each node"
   ([t hf]
-     (if (pre-leaf? t)
-       (let [tag (:label t)
-	     word (-> t children first :label)
+     (if (tree/pre-leaf? t)
+       (let [tag (tree/label t)
+	     word (-> t tree/children first tree/label)
 	     index (span/start t)]
 	 (assoc t :head-info [word tag index]))
-       (let [new-children (map #(add-head-info % hf) (children t))]
-	 (into t
-	       {:children new-children
-		:head-info (:head-info (nth new-children (hf t)))}))))
+       (let [new-children (map #(add-head-info % hf) (tree/children t))]
+	 (-> (mochi.tree.Tree. (tree/label t) new-children)
+	     (assoc :head-info (:head-info (nth new-children (hf t))))))))
   ([t] (add-head-info t collins/find-head-child)))
 
 ;;; -------------------------------------------
@@ -43,7 +40,7 @@
   (let [[label remain] (label-from-str (rest s))]    
     (loop [children [] remain remain]
       (if (= (first remain) \))
-        [(Tree. label children) (rest remain)]
+        [(mochi.tree.Tree. label children) (rest remain)]
         (let [[node remain] (tree-from-str remain)]
           (recur (conj children node) remain))))))
 
@@ -56,7 +53,7 @@
 	 (if (= (first s) \()
 	   (node-from-str s)
 	   (let [[label rest] (label-from-str  s)]
-	     [(Tree. label []) rest]))
+	     [(mochi.tree.Tree. label []) rest]))
 	 (catch Exception e
 	   (throw (RuntimeException. (str "Error parsing tree from: " (str e)))))))))
 
@@ -71,7 +68,3 @@
 (defn read-tree
   "Read (first) tree from string"
   [s] (first (read-trees s)))
-
-(comment
-  (str (read-tree "(NP (DT the) (NN man))"))
-)
