@@ -1,7 +1,9 @@
 (ns mochi.experiment
-  (:use [clojure.contrib def singleton duck-streams] 
+  (:use [clojure.contrib def singleton] 
 	[mochi gopts core file-utils])
-  (:require [mochi.logger :as logger]))
+  (:require
+   [clojure.contrib [duck-streams :as ds]]
+   [mochi.logger :as logger]))
 
 (declare #^java.io.File +exec-dir+)
 
@@ -28,7 +30,7 @@
 
 (def- setdown 
   (global-singleton (fn []
-    (write-lines (java.io.File. +exec-dir+ "gargs.txt")
+    (ds/write-lines (java.io.File. +exec-dir+ "gargs.txt")
 		 (map (fn [[k v]] (str k " " v)) (gargs)))
   (logger/shutdown))))
 

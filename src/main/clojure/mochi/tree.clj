@@ -1,6 +1,6 @@
 (ns mochi.tree
-  (:use [mochi core seq-utils vec-utils]    
-	[clojure.contrib str-utils])
+  (:use [mochi core seq-utils vec-utils]
+    [clojure.contrib str-utils])
   (:require [mochi [span :as span] [tree :as tree]]))
 
 ;;; -------------------------------------------
@@ -13,16 +13,16 @@
 
 (extend-protocol ITree
 
-   clojure.lang.IPersistentVector
-   ; Vectors are interepted as trees
-   ; e.g. ["NP" ["DT" "the"] ["NN" "man"]]
-   (label [t] (first t))
-   (children [t] (if-let [cs (rest t)] cs []))
-   
-   String
-   ; Every String can be treated as the leaf of a tree
-   (label [t] t)
-   (children [t] nil))
+  clojure.lang.IPersistentVector
+  ; Vectors are interepted as trees
+  ; e.g. ["NP" ["DT" "the"] ["NN" "man"]]
+  (label [t] (first t))
+  (children [t] (if-let [cs (rest t)] cs []))
+
+  String
+  ; Every String can be treated as the leaf of a tree
+  (label [t] t)
+  (children [t] nil))
 
 
 ;;; -------------------------------------------
@@ -35,15 +35,17 @@
 (defn pre-leaf? [t]
   (let [cs (children t)]
     (and (singleton? cs)
-	 (leaf? (first cs)))))
+      (leaf? (first cs)))))
 
-(defn nodes 
+(defn nodes
   "all nodes of the tree in a pre-order walk"
-  ([t pre-order?]
-    (if pre-order? 
-      (cons t (mapcat nodes (children t)))
-      (conj (ensure-vec (mapcat nodes (children t))) t)))
-  ([t] (nodes t true)))
+  ([t]
+    (loop [queue [t] res []]
+      (if-let [n (first queue)]
+        (recur
+          (concat (rest queue) (children n))
+          (conj res n))
+        res))))
 
 (defn leaves [t]
   (filter leaf? (nodes t)))
@@ -54,7 +56,7 @@
 (defn yield [t]
   (map label (leaves t)))
 
-(defn pre-yield [t] 
+(defn pre-yield [t]
   (map label (pre-leaves t)))
 
 ;;; -------------------------------------------
@@ -65,42 +67,42 @@
 
 (defrecord Tree [_label _children]
 
-    ITree
-    (label [t] _label)
-    (children [t] _children)
+  ITree
+  (label [t] _label)
+  (children [t] _children)
 
-    Object
-    (toString [this]
-      (if (leaf? this)
-       (str _label)
-       (format "(%s %s)" (str _label) (str-join " " (children this)))))
+  Object
+  (toString [this]
+    (if (leaf? this)
+      (str _label)
+      (format "(%s %s)" (str _label) (str-join " " (children this)))))
 
-    span/ISpan
-    (start [this] (first (:id this)))
-    (stop [this] (second (:id this))))
+  span/ISpan
+  (start [this] (first (:id this)))
+  (stop [this] (second (:id this))))
 
 (defn depth [t]
-  (if-let [id (:id t)] 
+  (if-let [id (:id t)]
     (nth id 2)
     (if (leaf? t) 0
       (inc (apply max (map depth (children t)))))))
 
-(defn add-ids 
+(defn add-ids
   "Returns tree which adds  :id -> [start stop depth] to each node's map. This
-   triple uniquely identifies a node in a tree."
-  ([t start]     
-     (if (leaf? t)      
-       (assoc (Tree. (label t) []) 
-	      :id [start (inc start) (depth t)])
-       (let [span-fn 
-	     (fn [[cs offset] c] 
-	       (let [new-child  (add-ids c offset)]
-		 [(conj! cs new-child) (second (:id new-child))]))
-	     [new-children end]  
-	      (reduce span-fn [(transient []) start] (children t))]
-	 (assoc
-	   (Tree. (label t)  (persistent! new-children))
-	   :id [start end (depth t)]))))
+triple uniquely identifies a node in a tree."
+  ([t start]
+    (if (leaf? t)
+      (assoc (Tree. (label t) [])
+        :id [start (inc start) (depth t)])
+      (let [span-fn
+            (fn [[cs offset] c]
+              (let [new-child (add-ids c offset)]
+                [(conj! cs new-child) (second (:id new-child))]))
+            [new-children end]
+            (reduce span-fn [(transient []) start] (children t))]
+        (assoc
+          (Tree. (label t) (persistent! new-children))
+          :id [start end (depth t)]))))
   ([t] (add-ids t 0)))
 
 ;;; -------------------------------------------
@@ -119,7 +121,7 @@
 ;;; -------------------------------------------
 ;;; Make New Trees
 ;;; -------------------------------------------
-		     			         
+
 (defn transform [t label-fn]
   (Tree. (label-fn t) (map #(transform % label-fn) (children t))))
 
@@ -131,8 +133,8 @@
   "find lowest common ancestor
   t: supports ITree and ISpan (Tree does this)
   n1, n2: are nodes in t"
-  [t n1 n2] 
-  (when (and (span/contains? t n1)  (span/contains? t n2))
+  [t n1 n2]
+  (when (and (span/contains? t n1) (span/contains? t n2))
     (let [res (first (filter identity (map #(find-lca % n1 n2) (children t))))]
       (or-else res t))))
 
@@ -141,27 +143,29 @@
   if one is not an ancestor, you will get the empty seq"
   [from to]
   (if (= from to) []
-      (let [new-from 
-	    (first (for [c (children from)	    	     
-			 :when (span/contains? c to)] c))]
-	(cons from (path-to new-from to)))))
+    (let [new-from
+          (first (for [c (children from)
+                       :when (span/contains? c to)] c))]
+      (cons from (path-to new-from to)))))
 
 (defn find-path
   [t start stop]
   (let [lca (find-lca t start stop)]
     (concat (reverse (path-to lca start)) (rest (path-to lca stop)))))
 
-(comment  
- (def t (to-tree  ["NP" ["NP" ["DT" "The"] ["NN" "man"]] ["NP" ["DT" "here"]]]))
- (label t)
- (children t)
- (str t)
- (println t)
- (str (to-tree t))
- (def ls (leaves t))
- (map str ls)
- (map label (path-to t (first ls)))
- (map label (find-path t (first ls) (last ls)))
- (yield (find-lca t (first ls) (nth ls 2)))
-)
-  
+(comment
+  (ns mochi.tree)
+  (def t (to-tree ["NP" ["NP" ["DT" "The"] ["NN" "man"]] ["NP" ["DT" "here"]]]))
+  (nodes t)
+  (label t)
+  (children t)
+  (str t)
+  (println (str t))
+  (str (to-tree t))
+  (def ls (leaves t))
+  (map str ls)
+  (map label (path-to t (first ls)))
+  (map label (find-path t (first ls) (last ls)))
+  (yield (find-lca t (first ls) (nth ls 2)))
+  )
+

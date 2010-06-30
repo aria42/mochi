@@ -98,7 +98,7 @@
 (comment
   
   {:counts (cntr/make {:a 1.0}) :lambda 1.0}
-  (def c (cntr/Counter))
+  (def c (cntr/Counter.))
   (prob c :a)
   (obs c :a 1.0)
   (def d (make-DirichletMultinomial :counts (cntr/make {:a 1.0}) :lambda 1.0))
@@ -108,4 +108,5 @@
   (events (obs-all d :a, 2.0 :b 3.0))
   (partition 2 [:a, 2.0 :b 3.0])
   (seq (obs-all d :a, 2.0 :b 4.0))
+  (.counts (make-DirichletMultinomial :lambda 1.0))
 )

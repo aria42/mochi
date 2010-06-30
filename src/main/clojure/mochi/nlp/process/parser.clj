@@ -8,19 +8,23 @@
 	[mochi core file-utils]))
 
 (defn #^ParserData load-pdata []
-  (logger/track "loading-pdata"
-     (-> "berkeley_models/eng_sm5.gr.gz" 	 
-	 (resource-to-temp-file ".gr.gz")
-	 .getAbsolutePath
-	 ParserData/Load)))
+  (-> "berkeley_models/eng_sm5.gr.gz" 	 
+      (resource-to-temp-file ".gr.gz")
+      .getAbsolutePath
+      ParserData/Load))
 
-(def pdata (global-singleton 
-  #(doto (load-pdata)
-     (-> .getNumbs Numberer/setNumberers))))
+(def pdata 
+     (global-singleton
+      (fn []
+	(doto (load-pdata)
+	  (-> .getNumbs Numberer/setNumberers)))))
 
-(def berkeley-parser (per-thread-singleton     
-   (fn [] (CoarseToFineMaxRuleParser. (.getGrammar #^ParserData (pdata)) (.getLexicon #^ParserData  (pdata))
-      1.0 -1 false false false false false true true))))
+(def berkeley-parser
+  (per-thread-singleton     
+   (fn [] (CoarseToFineMaxRuleParser.
+	   (.getGrammar (pdata))
+	   (.getLexicon (pdata))
+	   1.0 -1 false false false false false true true))))
 
 (defn- berkeley-to-mochi-tree [#^Tree t]
   (tree/make (.getLabel t) 
@@ -35,6 +39,7 @@
       TreeAnnotations/unAnnotateTree
       berkeley-to-mochi-tree))
   
-;(comment
-;  (println (str (parse-sent "Aria" "is" "cool" ".")))
-;)
+(comment
+  (pdata)
+ (println (str (parse-sent "Aria" "is" "cool" ".")))
+)

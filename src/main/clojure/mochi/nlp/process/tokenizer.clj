@@ -1,4 +1,5 @@
 (ns mochi.nlp.process.tokenizer
+  (:require [clojure.contrib [seq-utils :as cc.su]])
   (:use [clojure.contrib singleton def]   
 	[mochi core vec-utils file-utils]))
 
@@ -48,26 +49,33 @@
 	    (OpenNLPSpanTokenizer.)
 	    (SplitSpanTokenizer.))))
 
-(defn- preprocess-txt [txt]
-  (-> txt
-      (.replaceAll "\"(\\S+)" "``$1")
-      (.replaceAll "\"(\\s|$)" "''$1")))
-
-
-(defn- ptb-post-fix [w]
-  (cond 
-   (= "\"" w) "``"
-   (= "(" w) "-LRB-"
-   (= ")" w) "-RRB-"
-   (= "\"" w) "''"
-   :default w))
+(defn- quote-post-fix [toks]
+  (for [[i tok] (cc.su/indexed toks)]
+    (if-not (= (:raw-word tok) "\"") tok
+      (let [before (when (> i 0) (toks (dec i)))
+	    after  (when (< (inc i) (count toks)) (toks (inc i)))]
+	(cond
+	 ;; Touches Previous Token: Closed Quote
+	 (and before (= (-> before :char-span second) (-> tok :char-span first)))
+	 (assoc tok :word "''")
+	 ;; Touches Next Token: Open Quote
+	 (and after (= (-> after :char-span first) (-> tok :char-span second)))
+	 (assoc tok :word "``")
+	 ;; Default
+	 :default (throw (RuntimeException. "Isolated Quote")))))))
+	 
+	      
+(defn- ptb-post-fix [toks]
+  (for [t (quote-post-fix toks) :let [w (:word t)]]
+    (cond 
+     (= "(" w) (assoc t :word "-LRB-")
+     (= ")" w) (assoc t :word "-RRB-")
+     :default t)))
 
 (defn tokenize 
   "Returns seq of Token objects"
   ([txt] (tokenize (open-nlp-tokenizer) txt))
-  ([toker-impl txt] 
-     (for [t (span-tokenize toker-impl (preprocess-txt txt))]
-       (assoc t :word (ptb-post-fix (:word t))))))
+  ([toker-impl txt] (ptb-post-fix (span-tokenize toker-impl txt))))
 
 
 

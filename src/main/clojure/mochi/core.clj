@@ -56,14 +56,10 @@
   [m ks f & args]
   (update-in-default m ks (list) (fn [x] (map #(apply f % args) x))))
 
-(defn apply-with-default 
-  "same as apply but default argument"
-  [f dflt & args]
-  (fn [x] (apply f (if x x dflt) args)))
-
-(defn default-to [f d] 
+(defn default-to
+  "returns a wrapper around f that returns d if arg to f is nil"   
+  [f d]
   (fn [x] (if x (f x) d)))
-
 
 ;;; ------------------------
 ;;; Maxes
@@ -89,13 +85,17 @@
   ([xs] (find-max identity xs)))
 
 ;;; ------------------------
-;;; MISC
+;;; Control
 ;;; ------------------------
 
-(defn safe [f args]
-  (try
+(defn safe
+  "Wraps f execution in a try catch and
+   returns nil on exception."
+  [f]
+  (fn [& args]
+    (try
        (apply f args)
-       (catch Exception _ nil)))
+       (catch Exception _ nil))))
 
 (defmacro die-on-error [form & msgs]
   `(try
@@ -174,14 +174,6 @@
 ;;;  def macros
 ;;; -------------------------      
       
-;; (defmacro  defstrict
-;;   [name arglist & body]
-;;   `(defn ~name
-;;      ~(type-tagged-args arglist)
-;;      ~(arg-type-preconditions arglist)
-;2
-;      ~@body))      
-
 (defmacro def-
   "Same as def but yields a private definition"
   [name & decls]
@@ -193,9 +185,6 @@
 ;;; ------------------------
 
 (comment
+  (ns mochi.core)
   (update-all-in {:a [1 2 3]} [:a] inc)
 )
-
-
-
-

@@ -68,7 +68,7 @@
 ;;; change-ext
 ;;; ----------------
 
-(defmulti change-ext type)
+(defmulti change-ext (fn [& args] (type (first args))))
 
 (defmethod change-ext String [s #^String new-ext]
   (let [[base ext] (ext-split s)]
@@ -85,7 +85,7 @@
     :tag File }
   [f new-parent]   
   (let [f (to-file f)]
-    (java.io.File (to-file new-parent) (.getName f))))
+    (java.io.File. (to-file new-parent) (.getName f))))
 
 
 (defn resource-to-temp-file   

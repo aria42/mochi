@@ -1,12 +1,12 @@
 (ns mochi.cli
   {:doc "Command-Line-Options Utility"
    :author "aria42" }
-  (:use [mochi core]
-        [clojure.contrib duck-streams]))
+  (:use [mochi core])
+  (:require [clojure.contrib [duck-streams :as ds]]))
 
 (defn- process-file [f]
   (into {}
-    (for [#^String l (-> f reader line-seq) 
+    (for [#^String l (-> f ds/reader line-seq) 
 	  :let [[k v] (.split l "\\t")]]
       [(keyword k) v])))
 
