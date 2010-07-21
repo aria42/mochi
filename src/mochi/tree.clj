@@ -3,9 +3,8 @@
     [clojure.contrib str-utils])
   (:require [mochi [span :as span] [tree :as tree]]))
 
-;;; -------------------------------------------
-;;; ITree
-;;; -------------------------------------------
+
+;;; ITree ;;;
 
 (defprotocol ITree
   (label [t] "label data at node")
@@ -14,25 +13,26 @@
 (extend-protocol ITree
 
   clojure.lang.IPersistentVector
-					; Vectors are interepted as trees
-					; e.g. ["NP" ["DT" "the"] ["NN" "man"]]
+  ; Vectors are interepted as trees
+  ; e.g. ["NP" ["DT" "the"] ["NN" "man"]]
   (label [t] (first t))
   (children [t] (if-let [cs (rest t)] cs []))
 
   String
-					; Every String can be treated as the leaf of a tree
+  ; Every String can be treated as the leaf of a tree
   (label [t] t)
   (children [t] nil))
 
+;;; ITree Methods ;;;
 
-;;; -------------------------------------------
-;;; ITree Methods
-;;; -------------------------------------------
-
-(defn leaf? [t]
+(defn leaf?
+  "does this node have any children?"
+  [t]
   (empty? (children t)))
 
-(defn pre-leaf? [t]
+(defn pre-leaf?
+  "does this node have only a leaf child"
+  [t]
   (let [cs (children t)]
     (and (singleton? cs)
       (leaf? (first cs)))))
@@ -53,17 +53,19 @@
 (defn pre-leaves [t]
   (filter pre-leaf? (nodes t)))
 
-(defn yield [t]
+(defn yield
+  "the label of each leaf node"
+  [t]
   (map label (leaves t)))
 
-(defn pre-yield [t]
+(defn pre-yield
+  "the label of each pre-leaf node"
+  [t]
   (map label (pre-leaves t)))
 
-;;; -------------------------------------------
-;;; Tree Data Type
+;;; Tree Data Type ;;;
 ;;; This supports much more than ITree.
-;;; Each label is a map
-;;; -------------------------------------------
+;;; Each node is also a map to store more data
 
 (defrecord Tree [_label _children]
 
@@ -75,7 +77,7 @@
   (toString [this]
     (if (leaf? this)
       (str _label)
-      (format "(%s %s)" (str _label) (str-join " " (children this)))))
+      (format "(%s %s)" (str _label) (str-join " " _children))))
 
   span/ISpan
   (start [this] (first (:id this)))
@@ -89,7 +91,9 @@
 
 (defn add-ids
   "Returns tree which adds  :id -> [start stop depth] to each node's map. This
-triple uniquely identifies a node in a tree."
+triple uniquely identifies a node in a tree. Note that this means
+each node is now grounded in a paritcular tree and you can't meaningfully
+share tree structure."
   ([t start]
     (if (leaf? t)
       (assoc (Tree. (label t) [])
@@ -105,11 +109,12 @@ triple uniquely identifies a node in a tree."
           :id [start end (depth t)]))))
   ([t] (add-ids t 0)))
 
-;;; -------------------------------------------
-;;; Tree Factory Methods
-;;; -------------------------------------------
+;;; Tree Factory Methods ;;;
 
 (defn make
+  "Returns a Tree record and does add-ids so each
+  node knows the dominating span and depth. You
+  cannot share tree structure. "
   ([label children] (add-ids (Tree. label children)))
   ([label] (make label [])))
 
@@ -118,16 +123,12 @@ triple uniquely identifies a node in a tree."
     (make (first t) (vec (map to-tree (rest t))))
     (make t)))
 
-;;; -------------------------------------------
-;;; Make New Trees
-;;; -------------------------------------------
+;;; Make New Trees ;;;
 
 (defn transform [t label-fn]
   (Tree. (label-fn t) (map #(transform % label-fn) (children t))))
 
-;;; -------------------------------------------
-;;; Path Functions: Require Tree Datatype
-;;; -------------------------------------------
+;;; Path Functions: Require Tree Datatype ;;;
 
 (defn find-lca
   "find lowest common ancestor
@@ -138,7 +139,7 @@ triple uniquely identifies a node in a tree."
     (let [res (first (filter identity (map #(find-lca % n1 n2) (children t))))]
       (or-else res t))))
 
-(defn path-to
+(defn- path-to
   "find path between two nodes where one is an ancestor;
   if one is not an ancestor, you will get the empty seq"
   [from to]
@@ -149,6 +150,7 @@ triple uniquely identifies a node in a tree."
       (cons from (path-to new-from to)))))
 
 (defn find-path
+  "find path from start to stop in tree"
   [t start stop]
   (let [lca (find-lca t start stop)]
     (concat (reverse (path-to lca start)) (rest (path-to lca stop)))))
@@ -163,8 +165,7 @@ triple uniquely identifies a node in a tree."
   (str (to-tree t))
   (def ls (leaves t))
   (map str ls)
-  (map label (path-to t (first ls)))
   (map label (find-path t (first ls) (last ls)))
-  (yield (find-lca t (first ls) (nth ls 2)))
+  (yield (find-lca t (first ls) (last ls)))
   )
 

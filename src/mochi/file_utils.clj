@@ -90,7 +90,6 @@
   []
   (+ (inc 1) (inc 1)))
 
-
 (defn resource-to-temp-file   
   { :doc "write input-stream to temp file, return file"
     :tag File }

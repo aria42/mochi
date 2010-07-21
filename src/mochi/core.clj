@@ -1,28 +1,31 @@
 (ns mochi.core
   {:doc "My bag of clojure utility fns."
-   :author "aria42" })
+   :author "aria42" }
+  (:require [clojure.contrib [io :as io]]))
       
-;;; ------------------------
-;;; Map Methods
-;;; ------------------------
+;;; Map Methods ;;;
 
 (defn map-vals
   "returns k -> (f v) for (k,v) in m"
   [f m]
   (into {} (for [[k v] m] [k (f v)])))
 
-(defn sum [f xs]
-  (reduce
-   (fn [res x] (+ res (f x)))
-   0.0
-   xs))
+(defn sum
+  "returns sum (f x) for x in xs"
+  ([f xs]
+     (reduce
+      (fn [res x] (+ res (f x)))
+      0.0 xs))
+  ([xs] (reduce + xs)))
 
 (defn map-keys
   "returns (f k) -> v for (k,v) in m"
   [f m]
   (into {} (for [[k v] m] [(f k) v])))
 
-(defn deep-merge-with [f & maps]
+(defn deep-merge-with
+  "Recursely merge-with for nested maps"
+  [f & maps]
   (apply
    merge-with
    (fn [x y]
@@ -40,25 +43,20 @@
 	(map (fn [x] [(f x) x]) xs))))
   ([f xs] (make-map f xs true)))
     
-(defn map-invert
-  "v->k for (k,v) in m"
-  [m]
-  (into {} (map reverse m)))
-
 (defmacro map->
+  "performs map with argument inserted after fn in form"
   [form aseq]
   `(map #(~(first form) % ~@(rest form)) ~aseq))
 
 (defmacro map->>
+  "performs map with argument insterted at end of form"
   [form aseq]
   `(map #(~(first form) ~@(rest form) %) ~aseq))
 	 
-
-;;; ------------------------
-;;; Defaults
-;;; ------------------------
+;;; Handling Defaults ;;;
 
 (defn or-else [x d]
+  "returns d if not x"
   (if x x d))
 
 (defn update-in-default
@@ -67,6 +65,8 @@
   (update-in m ks (fn [x] (apply f (if x x d) args))))
 
 (defn update-all-in
+  "Like update-in but expects a seq of items, maps (f elem args)
+  over each element."
   [m ks f & args]
   (update-in-default m ks (list) (fn [x] (map #(apply f % args) x))))
 
@@ -80,9 +80,7 @@
   [f d]
   (fn [& args] (if-let [res (apply f args)] res d)))
 
-;;; ------------------------
-;;; Maxes
-;;; ------------------------
+;;; Maxes ;;;
 
 (defn find-maxes 
   "returns [arg-maxes max] tuple of f over xs"   
@@ -97,11 +95,7 @@
 	 [arg-maxes max])))
   ([xs] (find-maxes identity xs)))
 
-
-
-;;; ------------------------
-;;; Control
-;;; ------------------------
+;;; Control ;;;
 
 (defn safe
   "Wraps f execution in a try catch and
@@ -129,20 +123,25 @@
 ;;; Function Manipulation ;;;
 
 (defn rpartial
+  "right curry args, might be inefficient"
   ([f & args]
      (fn [& prefix-args]
        (apply f (concat prefix-args args)))))
 
-(defn rcomp [& fs] (apply comp (reverse fs)))
+(defn rcomp
+  "composes function f1 f2 f3 in reverse order
+   so (f3 (f2 (f1 x))), when you process data
+   you can think of the functions as happening
+   in order"
+  [& fs]
+  (apply comp (reverse fs)))
 
-
-;;; -------------------------------------
-;;; ITransient
+;;; ITransient ;;;
 ;;; Data which can be converted to a 
 ;;; transient version and backwards
-;;; ------------------------------------
 
 (defprotocol ITransient
+  "Make a transient/persistent version of an object"
   (transient? [_] "is transient")
   (to-transient [_] "makes a transient version")
   (to-persistent! [_] "makes a persistent version"))
@@ -157,10 +156,7 @@
   (transient? [x] true)
   (to-persistent! [x] (persistent! x)))
 
-
-;;; -----------------------
-;;; Num Conversions
-;;; -----------------------
+;;; Num Conversions ;;;
 
 (defprotocol INumConvert
   (#^int to-int [x] "make an int")
@@ -175,10 +171,7 @@
   (to-int [x] (int x))
   (to-double [x] (double x)))
  
-
-;;; ------------------------
-;;; IJList
-;;; ------------------------
+;;; IJList ;;;
 
 (defprotocol IJList
   (#^java.util.List to-jlist [x] "converts input to java.util.List"))
@@ -194,9 +187,7 @@
       (doseq [elem (seq x)] (.add res elem))
       res))) 
       
-;;; -------------------------
-;;;  def macros
-;;; -------------------------      
+;;;  def macros ;;;
       
 (defmacro def-
   "Same as def but yields a private definition"
@@ -225,6 +216,11 @@
       ~(decorate-hinted-args args) 
       ~@body)) 
 
+;;; IO-ish ;;;
+
+(defn ls [f]
+  (seq (.listFiles (io/file f))))
+
 
 ;;; Indexer ;;;
 
@@ -233,12 +229,3 @@
 	index-fn (into {} (map-indexed (fn [i x] [x i]) xs))]
     [xs (fn [x] (get index-fn x -1))]))
 
-;;; ------------------------
-;;; Test
-;;; ------------------------
-
-
-(comment
-  (ns mochi.core)
-  (update-all-in {:a [1 2 3]} [:a] inc) 
-)

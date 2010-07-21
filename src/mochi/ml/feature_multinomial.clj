@@ -1,4 +1,6 @@
-(ns mochi.ml.feat-multinomial
+(ns mochi.ml.feature-multinomial
+  {:doc "A feature-based multinomial distribution. "
+   :author "Aria Haghighi (aria42@gmail.com)"}
   (:use
    [mochi.array-utils :only [double-ainc!]]
    [mochi core])
@@ -19,7 +21,7 @@
 
 (defrecord EventInfo [fvs #^double weight])
 
-(defn- make-log-scores [event-info-map weights]
+(defn- make-log-scores [event-info-map #^doubles weights]
   (map-vals
    (fn [event-info]
      (sum
@@ -30,8 +32,7 @@
 (defn- make-event-probs [event-info-map weights]
   (-> (make-log-scores event-info-map weights)
       counter/log-scores-to-probs
-      second
-      counter/all-counts))
+      second))
 	     
 (defn- update-gradient! [gradient  event-info event-prob]
   (let [c (.weight event-info)]
@@ -112,21 +113,29 @@
 
 ;;; Factory ;;;
 
+(defn new-suff-stats [feat-fn]
+  (FeatMultinomialSuffStats. (counter/make) feat-fn))
+
 (defn make [feat-fn event-counts]
   (distr/to-distribution (FeatMultinomialSuffStats. event-counts feat-fn)))
 
 ;;; Testing ;;;
 
-(defn run[& ignore]
+(defn- run [& ignore]
   (Execution/init nil)
   (def f (fn [x] [[(format "Identity:%s" x) 1.0]
-		  [(format "FirstChar%s" (first x)) 1.0]
+		  [(format "FirstChar:%s" (first x)) 1.0]
 		  [(format "LastChar:%s" (last x)) 1.0]]))
 
-  (println (train-multinomial f {"aria" 10.0 "baria" 3.0 "bas" 1.0
+  (def event-counts {"aria" 10.0 "baria" 3.0 "bas" 1.0
 				 "daria" 3.0 "saria" 2.0
 				 "sam" 20.0
 				 "sally" 3.0
-				 "santa" 1.0})))
+				 "santa" 1.0})
+  
+  (println (train-multinomial f event-counts))
+  (println (distr/make-DirichletMultinomial
+	    :counts (counter/make event-counts)
+	    :lambda 0.0)))
 
-(when *command-line-args* (apply run *command-line-args*))
+;(when *command-line-args* (apply run *command-line-args*))

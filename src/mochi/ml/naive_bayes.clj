@@ -5,9 +5,7 @@
     [mochi.counter :as cntr]
     [mochi.ml.distribution :as distr]))
 
-;;; -----------------
-;;; Data
-;;; -----------------
+;;; Data ;;;
 
 (defprotocol IDatum
   "Data supports a method to get at [f,v] pairs"
@@ -24,11 +22,9 @@
   ILabeled
   (label [x] (first x)))
 
-;;; --------------
-;;;  Params
-;;; --------------
+;;;  Params ;;;
 
-(deftype Params [labelToFeatDistrs labelPrior])
+(defrecord Params [labelToFeatDistrs labelPrior])
 
 (def default-feat-distr
   (reify
@@ -37,15 +33,17 @@
   
 (defn all-labels [params] (distr/support (.labelPrior params)))
 
-(defn feat-distr [params label]  
+(defn feat-distr [params label]
   (fn [f] (-> params :labelToFeatDistrs (get label) (get f default-feat-distr))))
 
 (defn obs-log-prob
   "given datum, f: label -> log P(datum|label)"
   [params datum]
   (let [fvs (feat-vec datum) distr-fn (feat-distr params label)]
-    (fn [label] 
-      (reduce + (for [[f v] fvs] (Math/log (distr/prob (distr-fn f) v)))))))
+    (fn [label]
+      (mc/sum (fn [[f v]]
+	     (-> f distr-fn (distr/log-prob v)))
+	   fvs))))
 
 (defn log-prior
   "f: label -> log P(label)"

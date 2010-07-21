@@ -15,7 +15,7 @@
 
 (extend-protocol ICounter
   clojure.lang.IPersistentMap
-  (total-count [this] (reduce + (vals this)))
+  (total-count [this] (sum (vals this)))
   (get-count [this k] (get this k 0.0))
   (inc-count [this k v] (assoc this k  (+ (get this k 0.0) v)))
   (all-counts [this] this))
@@ -60,14 +60,11 @@
   ([counts] (Counter. counts (reduce + (map second counts))))
   ([counts total] (Counter. counts total)))
 
-
 ;;; Methods That Make a new ICounter ;;;
 
-
 (defn map-counter 
-  "counter: supports [k v] seq view"
   [f counter]
-  (make (map-vals f counter)))
+  (make (map-vals f (all-counts counter))))
 
 (defn scale
   [counter alpha]
@@ -77,39 +74,42 @@
   [counter]
   (scale counter (/ 1 (total-count counter))))
 
-
-(defn merge-counters [& counters]
+(defn merge-counters
+  "adds counts from all input counters"
+  [& counters]
   (Counter.
    (apply merge-with + (map all-counts counters))
-   (apply + (map total-count counters))))
-
+   (sum  (map total-count counters))))
 
 ;;; Mathy Methods ;;;
 
-(defn log-normalize [counter]
+(defn log-normalize
+  "for a counter, where counts represent lg(x) counts
+   returns log-sum = lg(um_i x_i) as well as
+   counts which subtract log-sum from each value"
+  [counter]
   (let [log-sum (sloppy-math/log-add (map second counter))]
     [log-sum (map-counter #(- % log-sum) counter)]))
-
 
 (defn log-scores-to-probs [counter]
   (let [[log-sum log-counts] (log-normalize counter)]
     [log-sum (map-counter #(Math/exp %) log-counts)]))
 
 (defn find-max [counter]
-  (apply max-key second (seq (all-counts counter))))
+  (apply max-key second (all-counts counter)))
 
 (comment
-    (def c (make))
-    (def c (-> (make) (inc-count :a 1.0) (inc-count :b 2.0)))
-    (all-counts c)
-    (find-max c)
-    (merge-counters c c)
-    (log-normalize (inc-count c :a -1.0)) 
-    (log-scores-to-probs (inc-count c :a -1.0))
-    (-> (make)
-	(inc-count :a 1.0)
-	(inc-count :b 2.0)
-	(scale 2.0)
-	normalize)
-    )
+  (def c (make))
+  (def c (-> (make) (inc-count :a 1.0) (inc-count :b 2.0)))
+  (all-counts c)
+  (find-max c)
+  (merge-counters c c)
+  (log-normalize (inc-count c :a -1.0)) 
+  (log-scores-to-probs (inc-count c :a -1.0))
+  (-> (make)
+      (inc-count :a 1.0)
+      (inc-count :b 2.0)
+      (scale 2.0)
+      normalize)
+  )
 

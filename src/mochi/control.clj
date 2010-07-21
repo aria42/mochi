@@ -1,8 +1,6 @@
 (ns mochi.control)
 
-;;; ------------------------
-;;; Control Structure
-;;; ------------------------
+;;; Control Structure ;;;
 
 (defn die-when
   [pred x]
