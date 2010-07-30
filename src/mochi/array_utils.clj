@@ -28,9 +28,9 @@
       `(let [~a-sym ~nested-array]
          (aset ~a-sym ~idx ~v))))
 
-(defn double-ainc! [array i inc-amt]
-  (let [v (deep-aget doubles array i)]
-    (deep-aset! doubles array i (+ v inc-amt))
+(defn double-ainc! [#^doubles array i inc-amt]
+  (let [v (aget array i)]
+    (aset-double  array i  (+ v inc-amt))
     array))
 
 (comment

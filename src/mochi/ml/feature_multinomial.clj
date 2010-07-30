@@ -12,7 +12,8 @@
    [edu.umass.nlp.exec Execution]
    [edu.umass.nlp.optimize
      IOptimizer  LBFGSMinimizer
-     IDifferentiableFn CachingDifferentiableFn]
+    IDifferentiableFn CachingDifferentiableFn]
+   [edu.umass.nlp.ml Regularizers]
    [mochi.ml.distribution ISuffStats IDistribution]))
 
 ;;; Train ;;;
@@ -21,47 +22,50 @@
 
 (defrecord EventInfo [fvs #^double weight])
 
-(defn- make-log-scores [event-info-map #^doubles weights]
-  (map-vals
-   (fn [event-info]
-     (sum
-          (fn [#^FeatValPair fv] (* (aget weights (.index fv)) (.val fv)))
-	  (.fvs event-info)))
-   event-info-map))
+(defn- event-potential-fn
+  "returns f: fv -> weights * fv"
+  [#^doubles weights]
+  (fn [#^EventInfo event-info]
+    (sum
+     (fn [#^FeatValPair fv] (* (aget weights (.index fv)) (.val fv)))
+     (.fvs event-info))))
 
 (defn- make-event-probs [event-info-map weights]
-  (-> (make-log-scores event-info-map weights)
-      counter/log-scores-to-probs
-      second))
-	     
-(defn- update-gradient! [gradient  event-info event-prob]
-  (let [c (.weight event-info)]
+  (->> event-info-map
+       (map-vals (event-potential-fn weights))
+       counter/log-scores-to-probs
+       second))
+	    
+(defn- update-gradient! [gradient  #^EventInfo event-info model-prob]
+  (let [empirical (.weight event-info)]
     (doseq [#^FeatValPair fv (.fvs event-info)
-	    :let [index (.index fv)
-		  val   (.val fv)]]
-      #_(swank.core/break)
-      (double-ainc! gradient index (* c val (- 1.0 event-prob))))))
+	    :let [index (.index fv) val (.val fv)]]
+      (double-ainc! gradient index (* val (- empirical  model-prob))))))
 
-(defn- objective-compute-helper [event-info-map  weights]
+(defn- objective-compute-helper [event-info-map  #^doubles weights]
   (let [event-probs (make-event-probs event-info-map weights)
 	gradient (double-array (alength weights))]
     ; return [log-prob gradient] pair 
     [(sum 
       (fn [[event #^EventInfo event-info]]
-	(let [#^double event-prob (event-probs event)]
+	(let [event-prob (event-probs event)]
 	  (update-gradient! gradient event-info event-prob)
 	  (* (.weight event-info) (Math/log event-prob))))
       event-info-map)
      gradient]))
 
-(defn- objective-compute [event-info-map weights]
+(defn- wrap-regularizer [weights neg-log-prob #^doubles gradient sigma-sq]
+  (let [reg-fn (Regularizers/getL2Regularizer sigma-sq)
+	#^IPair reg-pair (.apply reg-fn weights)]
+    (DoubleArrays/addInPlace gradient #^doubles (.getSecond reg-pair))
+    (BasicPair/make
+     (+ neg-log-prob (.getFirst reg-pair))
+     gradient)))
+
+(defn- objective-compute [event-info-map weights sigma-sq]
   (let [[log-prob gradient] (objective-compute-helper event-info-map  weights)]
-    #_(do (println event-probs)
-	  (println log-prob)
-	  (println (seq gradient))	
-	  (swank.core/break))
     (DoubleArrays/scaleInPlace gradient -1)
-    (BasicPair/make (- log-prob) gradient)))
+    (wrap-regularizer weights (- log-prob) gradient sigma-sq)))
 
 (defn- feat-indexing [feat-fn events]
   (indexer (for [e events [f _] (feat-fn e)] f)))
@@ -78,21 +82,22 @@
 	       count)]))
       feats]))
 
-(defn- do-optimization [feats event-info-map]
+(defn- do-optimization [feats event-info-map sigma-sq]
   (-> (LBFGSMinimizer.)
       (.minimize
           (CachingDifferentiableFn.
 	   (reify IDifferentiableFn
 		  (#^IPair computeAt [this #^doubles weights]
-			   (objective-compute event-info-map weights))
+			   (objective-compute event-info-map weights sigma-sq))
 		  (#^int getDimension [this] (count feats))))
 	  (double-array (count feats))
 	  nil)
       .minArg))
 
-(defn train-multinomial [feat-fn event-counts]
+(defn train-multinomial [feat-fn event-counts &
+			 {:keys [sigma-sq] :or {sigma-sq 1.0}}]
   (let [[event-info-map feats] (make-event-info-map feat-fn event-counts)
-	#^doubles weights (do-optimization feats event-info-map)]
+	#^doubles weights (do-optimization feats event-info-map sigma-sq)]
     (make-event-probs event-info-map weights)))
 	  
 ;;; Feat Multinomial ;;;
@@ -107,7 +112,7 @@
     feat-fn))
   (merge-stats [this other]
    (FeatMultinomialSuffStats.
-    (counter/merge-counters (.event-counts this) (.event-counts other))
+    (counter/merge-counters event-counts (.event-counts #^FeatMultinomialSuffStats other))
     feat-fn))
   (to-distribution [this] (train-multinomial feat-fn event-counts)))
 
@@ -121,21 +126,20 @@
 
 ;;; Testing ;;;
 
-(defn- run [& ignore]
+(defn- -main [& ignore]
   (Execution/init nil)
   (def f (fn [x] [[(format "Identity:%s" x) 1.0]
-		  [(format "FirstChar:%s" (first x)) 1.0]
-		  [(format "LastChar:%s" (last x)) 1.0]]))
-
-  (def event-counts {"aria" 10.0 "baria" 3.0 "bas" 1.0
-				 "daria" 3.0 "saria" 2.0
-				 "sam" 20.0
-				 "sally" 3.0
-				 "santa" 1.0})
+		  #_[(format "BIAS") 1.0]
+		  #_[(format "FirstChar:%s" (first x)) 1.0]
+		  #_[(format "LastChar:%s" (last x)) 1.0]]))
   
-  (println (train-multinomial f event-counts))
+  (def event-counts (counter/normalize {"aria" 1 "s" 1 "baria" 7 "daria" 1}))
+  (seq (double-array [(Math/log 1) (Math/log 7) (Math/log 1) (Math/log 1)]))
+  (def d  (train-multinomial f event-counts))
+  (distr/log-prob d "aria")
+  (reduce + (vals d))
+  (println d)
   (println (distr/make-DirichletMultinomial
 	    :counts (counter/make event-counts)
-	    :lambda 0.0)))
-
-;(when *command-line-args* (apply run *command-line-args*))
+	    :lambda 0.0))
+)

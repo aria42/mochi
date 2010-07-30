@@ -11,7 +11,7 @@
 ;;; Basic Search Problem Abstraction ;;;
 
 (defprotocol ISearchProblem
-  (is-goal [this state] "state goal test")
+  (is-goal? [this state] "state goal test")
   (init-state [this] "initial state of problem")
   (successors [this state] "seq of [neighbor step-cost]"))
 
@@ -38,7 +38,7 @@
     (loop [ignore nil]
       (let [#^SearchNode node (.poll pq) path (.path node) state (first path)]
 	#_(swank.core/break)
-	(if (is-goal search-problem state) [(reverse path) (.cost-so-far node)]	  
+	(if (is-goal? search-problem state) (reverse path) 
 	  (recur
 	   (doseq [[succ cost] (successors search-problem state)
 		   :let [g (+ (.cost-so-far node) cost)]]
@@ -46,10 +46,11 @@
 				   g
 				   (priority-fn node succ cost))))))))))
 
-
 (defn astar-search
   [search-problem heuristic-fn]
-  (generic-search search-problem (fn [node succ cost] (heuristic-fn succ))))
+  (generic-search search-problem
+		  (fn [#^SearchNode node succ cost]
+		    (+ (.cost-so-far node) cost (heuristic-fn succ)))))
 
 (defn uniform-cost-search
   [search-problem]
@@ -59,7 +60,7 @@
 
 (defrecord GraphPathSearchProblem [graph start goal]
   ISearchProblem
-  (is-goal [this state] (= state goal))
+  (is-goal? [this state] (= state goal))
   (init-state [this] start)
   (successors [this state] (get graph state [])))
 

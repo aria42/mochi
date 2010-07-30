@@ -1,9 +1,14 @@
 (ns mochi.map-reduce
   (:require [clojure.contrib seq-utils]))
 
-(defn preduce [merge-fn reduce-fn init-val chunk-size xs]
-  (reduce merge-fn
+(defn preduce [merge-fn
+	       reduce-fn
+	       post-reduce-fn
+	       init-val-fn
+	       chunk-size
+	       xs]
+  (apply merge-fn
    (pmap
-    (fn [chunk] (reduce reduce-fn init-val chunk))
+    (fn [chunk] (post-reduce-fn (reduce reduce-fn (init-val-fn) chunk)))
     (partition-all chunk-size xs))))
 

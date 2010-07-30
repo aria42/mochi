@@ -1,8 +1,8 @@
 (ns mochi.ml.distribution
-  (:use [clojure.contrib [def :only [defnk]]])
+  (:use [clojure.contrib [def :only [defnk]]]
+	[mochi core])
   (:require
-   [mochi [counter :as cntr]          
-          [core :as core]]))
+   [mochi [counter :as cntr]]))
 
 ;;; Suff Stats ;;;
 
@@ -12,10 +12,6 @@
   (merge-stats [this other] "merge sufficient statistics")
   (to-distribution [this] "make an IDistribution from suff stats"))
 
-(extend-protocol ISuffStats
-
-  mochi.counter.Counter
-  (obs [c e w] (cntr/inc-count c e w)))
 
 (defn obs-all 
   "(obs-all suff-stats :a 1.0 :b 2.0)"
@@ -82,26 +78,38 @@
 
 (deftype DirichletMultinomial [counts lambda numKeys]
   java.lang.Object
-  (toString [this] (-> this events vec str))
+  (toString [this]
+    (if (transient? this)
+      (str counts)
+      (-> this events vec str)))
 
   clojure.lang.Seqable
   (seq  [this] (events this))
 
   clojure.lang.IFn
-  (invoke  [this e] (prob this e)))
+  (invoke  [this e] (prob this e))
+
+  clojure.lang.IPersistentCollection
+
+  clojure.lang.IEditableCollection
+  (asTransient [this] (DirichletMultinomial. (transient counts) lambda numKeys))
+
+  
+  clojure.lang.ITransientCollection
+  (persistent [this] (DirichletMultinomial. (persistent! counts) lambda numKeys)))
 
 (extend DirichletMultinomial
   
   ISuffStats
   { :obs
-     (fn [this e w]
+     (fn [#^DirichletMultinomial this e w]
        (let [new-counts (cntr/inc-count (.counts this) e w)]
 	 (DirichletMultinomial.
 	  new-counts
 	  (.lambda this)
 	  (max (count new-counts) (.numKeys this)))))
    :merge-stats
-      (fn [this other]
+   (fn [#^DirichletMultinomial this #^DirichletMultinomial other]
 	(let [new-counts
 	      (cntr/merge-counters  (.counts this) (.counts other))]
 	  (DirichletMultinomial.
@@ -109,21 +117,25 @@
 	     (.lambda this)
 	     (max (count new-counts) (.numKeys this)))))
    :to-distribution
-     (fn [this] this)
+   (fn [#^DirichletMultinomial this]
+     (DirichletMultinomial. (.counts this) (.lambda this) (.numKeys this)))
    }
 
   IDistribution
   (into default-distr-impl
-   {:events (fn [this] 
+   {:events (fn [#^DirichletMultinomial this] 
      (let [total (cntr/total-count (.counts this))]
        (for [[k c] (.counts this)] 
 	[k (laplace-smoothed-prob c (.lambda this) total  (.numKeys this))])))
     
-    :prob (fn [this e]
+    :prob (fn [#^DirichletMultinomial this e]
       (laplace-smoothed-prob (-> this .counts (cntr/get-count e))
 			     (.lambda this)
 			     (-> this .counts cntr/total-count)
-			     (.numKeys this)))}))
+			     (.numKeys this)))})
+
+  IsTransient
+  {:transient? (fn [#^DirichletMultinomial this] (transient? (.counts this)))})
            
 (defnk make-DirichletMultinomial
   [:counts (cntr/make) :lambda 0.0 :numKeys -1]
@@ -134,6 +146,7 @@
 
 (comment
   (def d (make-DirichletMultinomial :counts (cntr/make {:a 1.0}) :lambda 1.0))
+  (persistent! (obs (transient d) :a 1.0)) 
   (def e (make-DirichletMultinomial :counts (cntr/make {:b 2.0}) :lambda 1.0))
   (def d (merge-stats d e))
   (log-prob d :a)

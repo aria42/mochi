@@ -52,7 +52,19 @@
   "performs map with argument insterted at end of form"
   [form aseq]
   `(map #(~(first form) ~@(rest form) %) ~aseq))
-	 
+
+(defn update-in!
+  "'Updates' a value in a nested associative structure, where ks is a
+  sequence of keys and f is a function that will take the old value
+  and any supplied args and return the new value, and returns a new
+  nested structure.  If any levels do not exist, hash-maps will be
+  created."
+  {:added "1.0"}
+  ([m [k & ks] f & args]
+   (if ks
+     (assoc! m k (apply update-in! (get m k) ks f args))
+     (assoc! m k (apply f (get m k) args)))))
+
 ;;; Handling Defaults ;;;
 
 (defn or-else [x d]
@@ -136,25 +148,19 @@
   [& fs]
   (apply comp (reverse fs)))
 
-;;; ITransient ;;;
-;;; Data which can be converted to a 
-;;; transient version and backwards
+;;; Transients  ;;;
 
-(defprotocol ITransient
-  "Make a transient/persistent version of an object"
-  (transient? [_] "is transient")
-  (to-transient [_] "makes a transient version")
-  (to-persistent! [_] "makes a persistent version"))
+(defn editable? [coll]
+  (instance? clojure.lang.IEditableCollection coll))
 
-(extend-protocol ITransient
+(defprotocol IsTransient
+  (transient? [coll] "Is the coll in a transient mode?"))
 
-  clojure.lang.IEditableCollection
-  (transient? [x] false)
-  (to-transient  [x] (transient x))
+(extend-protocol IsTransient
 
-  clojure.lang.ITransientCollection
-  (transient? [x] true)
-  (to-persistent! [x] (persistent! x)))
+  java.lang.Object
+  (transient? [coll]
+     (instance? clojure.lang.ITransientCollection coll)))
 
 ;;; Num Conversions ;;;
 
@@ -220,6 +226,13 @@
 
 (defn ls [f]
   (seq (.listFiles (io/file f))))
+
+;;; Java Field Set ;;;
+
+(defmacro set-field! [inst field val]
+  `(set! (. ~inst ~field) ~val))
+
+
 
 
 ;;; Indexer ;;;
