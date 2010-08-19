@@ -23,7 +23,7 @@
 (defn obs-counter
   "observe all events in the counter arg"
   [suff-stats counter]
-  (apply obs-all suff-stats (mapcat (seq counter))))
+  (apply obs-all suff-stats (apply concat (cntr/all-counts counter))))
 
 ;;; Distribution ;;;
 
@@ -142,15 +142,18 @@
   (let [numKeys (if (> numKeys 0) numKeys (count (seq counts)))]
     (DirichletMultinomial. counts lambda numKeys)))
 
+
+
 ;;; Testing ;;;
 
 (comment
+
+  
   (def d (make-DirichletMultinomial :counts (cntr/make {:a 1.0}) :lambda 1.0))
   (persistent! (obs (transient d) :a 1.0)) 
   (def e (make-DirichletMultinomial :counts (cntr/make {:b 2.0}) :lambda 1.0))
   (def d (merge-stats d e))
   (log-prob d :a)
   (obs d :a 2.0) 
-  (to-distribution (obs d :a 2)) 
   (mode d)
 )

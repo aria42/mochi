@@ -2,7 +2,20 @@
   {:doc "My bag of clojure utility fns."
    :author "aria42" }
   (:require [clojure.contrib [io :as io]]))
-      
+
+
+;;; Build ;;;
+
+(defmacro reducate
+  "map:for :: reduce:reducate"
+  ([accum bindings body]
+     `(reduce (fn ~[(first accum) (first bindings)] ~body)
+              ~(second accum) ~(second bindings)))
+  ([[name value] body]
+     `(let [[init# & more#] ~value]
+        (reducate [~'% init#] [~name more#] ~body))))
+
+    
 ;;; Map Methods ;;;
 
 (defn map-vals
@@ -18,20 +31,16 @@
       0.0 xs))
   ([xs] (reduce + xs)))
 
+(defn psum
+  ([f chunk-size xs]
+     (sum (pmap (partial sum f) (partition chunk-size xs))))
+  ([chunk-size xs]
+     (psum identity chunk-size xs)))
+
 (defn map-keys
   "returns (f k) -> v for (k,v) in m"
   [f m]
   (into {} (for [[k v] m] [(f k) v])))
-
-(defn deep-merge-with
-  "Recursely merge-with for nested maps"
-  [f & maps]
-  (apply
-   merge-with
-   (fn [x y]
-     (if (and (map? x) (map? y)) (deep-merge-with f x y)
-	 (f x y)))
-   maps))
 
 (defn make-map
   "makes a map by forming x -> (f x) pairs
@@ -70,11 +79,11 @@
 (defn or-else [x d]
   "returns d if not x"
   (if x x d))
-
 (defn update-in-default
   "like update-in but provide a default if value doesn't exist"
   [m ks d f & args]
   (update-in m ks (fn [x] (apply f (if x x d) args))))
+
 
 (defn update-all-in
   "Like update-in but expects a seq of items, maps (f elem args)
@@ -118,6 +127,7 @@
        (apply f args)
        (catch Exception _ nil))))
 
+
 (defmacro die-on-error [form & msgs]
   `(try
       ~form
@@ -134,11 +144,13 @@
 
 ;;; Function Manipulation ;;;
 
+
 (defn rpartial
   "right curry args, might be inefficient"
   ([f & args]
      (fn [& prefix-args]
        (apply f (concat prefix-args args)))))
+
 
 (defn rcomp
   "composes function f1 f2 f3 in reverse order
@@ -148,25 +160,29 @@
   [& fs]
   (apply comp (reverse fs)))
 
+
 ;;; Transients  ;;;
 
 (defn editable? [coll]
   (instance? clojure.lang.IEditableCollection coll))
 
+
 (defprotocol IsTransient
   (transient? [coll] "Is the coll in a transient mode?"))
 
-(extend-protocol IsTransient
 
+(extend-protocol IsTransient
   java.lang.Object
   (transient? [coll]
      (instance? clojure.lang.ITransientCollection coll)))
+
 
 ;;; Num Conversions ;;;
 
 (defprotocol INumConvert
   (#^int to-int [x] "make an int")
   (#^double to-double [x] "make a double"))
+
 
 (extend-protocol INumConvert
   
@@ -179,14 +195,15 @@
  
 ;;; IJList ;;;
 
+
 (defprotocol IJList
   (#^java.util.List to-jlist [x] "converts input to java.util.List"))
+
 
 (extend-protocol IJList
   
   java.util.List
   (to-jlist [x] x)
-
   clojure.lang.Seqable
   (to-jlist [x] 
     (let [res (java.util.ArrayList.)]
@@ -223,6 +240,7 @@
       ~@body)) 
 
 ;;; IO-ish ;;;
+
 
 (defn ls [f]
   (seq (.listFiles (io/file f))))

@@ -13,7 +13,7 @@
 (extend-protocol ITree
 
   clojure.lang.IPersistentVector
-  ; Vectors are interepted as trees
+  ; Nested vectors are interepted as trees
   ; e.g. ["NP" ["DT" "the"] ["NN" "man"]]
   (label [t] (first t))
   (children [t] (if-let [cs (rest t)] cs []))
@@ -80,12 +80,13 @@
       (format "(%s %s)" (str _label) (str-join " " _children))))
 
   span/ISpan
+  ; Each tree knows its span if you've added ids (see add-ids)
   (start [this] (first (:id this)))
   (stop [this] (second (:id this))))
 
 (defn depth [t]
   (if-let [id (:id t)]
-    (nth id 2)
+    (last id)
     (if (leaf? t) 0
       (inc (apply max (map depth (children t)))))))
 
@@ -97,7 +98,7 @@ share tree structure."
   ([t start]
     (if (leaf? t)
       (assoc (Tree. (label t) [])
-        :id [start (inc start) (depth t)])
+        :id [start (inc start) 0])
       (let [span-fn
 	     (fn [[cs offset] c]
 	       (let [new-child (add-ids c offset)]

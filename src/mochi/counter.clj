@@ -2,7 +2,7 @@
   {:doc "Counter abstraction. Essentially a map between keys
          and counts. Don't just use a map since you may want to
          cache things like the total count. Forms the basis
-         for a lot of discrete probability codde. "
+         for a lot of discrete probability code. "
    :author "Aria Haghighi"}
   (:use [mochi core])
   (:require [mochi.sloppy-math :as sloppy-math]))
@@ -12,25 +12,31 @@
 (defprotocol ICounter
   (total-count [c] "total-count of all key value pairs")
   (get-count [c k] "get count")
-  (inc-count [c k v] "inc count, return a new counter")
+  (inc-count [c k v] "inc count, return a new counter with updated counts")
   (all-counts [c] "a map from keys to counts"))
 
 (defn set-count [counter k v]
   (inc-count counter k (- v (get-count counter k))))  
 
 (extend-protocol ICounter
+  ; So a normal map is treated like a counter
   clojure.lang.IPersistentMap
   (total-count [this] (sum (vals this)))
   (get-count [this k] (get this k 0.0))
   (inc-count [this k v] (assoc this k  (+ (get this k 0.0) v)))
   (all-counts [this] this)
-
+  ; As is a transient map
   clojure.lang.ITransientMap
   (total-count [this] (sum (vals this)))
   (get-count [this k] (get this k 0.0))
   (inc-count [this k v] (assoc! this k  (+ (get this k 0.0) v)))
   (all-counts [this] this))
 
+
+; The counter type exists, to
+; cache the total as well as
+; add things like IFn support
+; and a unique toString
 (deftype Counter [counts total]
 
   clojure.lang.Seqable
@@ -74,8 +80,7 @@
 (defn make
   "ICounter Factory"
   ([] (Counter. {} 0.0))
-  ([counts] (Counter. counts (reduce + (map second counts))))
-  ([counts total] (Counter. counts total)))
+  ([counts] (Counter. counts (reduce + (map second counts)))))
 
 ;;; Methods That Make a new ICounter ;;;
 
@@ -121,21 +126,20 @@
   (transient? c)
   (transient? (transient c))
   (transient? c)
-
-  (time
+  ;
+	(time
    (persistent!
 	 (reduce
 	  (fn [counts key] (inc-count counts key 1.0))
 	  (transient (make))
 	  (take 1e5 (repeatedly (constantly :a))))))
-
-  (time
+  ;
+	(time
    (reduce
     (fn [counts key] (inc-count counts key 1.0))
     (make)
     (take 1e5 (repeatedly (constantly :a)))))
-
-  
+  ;
   (def c (-> (make) (inc-count :a 1.0) (inc-count :b 2.0)))
   (all-counts c)
   (find-max c)
