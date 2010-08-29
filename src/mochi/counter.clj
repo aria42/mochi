@@ -58,10 +58,8 @@
   (asTransient [this] (Counter. (transient counts) total))
 
   clojure.lang.ITransientCollection
-  (persistent [this] (Counter. (persistent! counts) total)))
-
-(extend-type Counter
-
+  (persistent [this] (Counter. (persistent! counts) total))
+  
   IsTransient
   (transient? [this] (transient? (.counts this)))
 
@@ -73,9 +71,7 @@
     (let [assoc-fn (if (transient? this) assoc! assoc)]
       (Counter.
        (assoc-fn (.counts this) k (+ v (get-count this k)))
-       (+ (.total this) v))))
-
-)
+       (+ (.total this) v)))))
 
 (defn make
   "ICounter Factory"
@@ -121,7 +117,7 @@
   (apply max-key second (all-counts counter)))
 
 (comment
-  (def c (make))
+  (def c (make))  
   (class (.counts c))
   (transient? c)
   (transient? (transient c))
@@ -146,6 +142,8 @@
   (merge-counters c c)
   (log-normalize (inc-count c :a -1.0)) 
   (log-scores-to-probs (inc-count c :a -1.0))
+  x
+  (inc "a")
   (-> (make)
       (inc-count :a 1.0)
       (inc-count :b 2.0)

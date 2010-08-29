@@ -44,14 +44,14 @@
 
 (defn- objective-compute-helper [event-info-map  #^doubles weights opts]
   (let [event-probs (make-event-probs event-info-map weights)
-	gradient (double-array (alength weights))]
+	    gradient (double-array (alength weights))]
     ; return [log-prob gradient] pair 
     [(sum
-      (fn [[event #^EventInfo event-info]]
-	(let [event-prob (event-probs event)]
-	  (update-gradient! gradient event-info event-prob)
-	  (* (.weight event-info) (Math/log event-prob))))
-      event-info-map)
+          (fn [[event #^EventInfo event-info]]
+    	    (let [event-prob (event-probs event)]
+    	      (update-gradient! gradient event-info event-prob)
+    	      (* (.weight event-info) (Math/log event-prob))))
+          event-info-map)
      gradient]))
 
 (defn- wrap-regularizer [weights neg-log-prob #^doubles gradient sigma-sq]
@@ -103,6 +103,12 @@
 	  
 ;;; Feat Multinomial ;;;
 
+(defrecord FeatMultinomialDistribution
+  [potential-fn log-sum]
+  IDistribution
+  (log-prob [this event]
+      (- (potential-fn event) log-sum)))
+
 (defrecord FeatMultinomialSuffStats
   [event-counts feat-fn train-opts]
 
@@ -117,7 +123,11 @@
     (counter/merge-counters event-counts (.event-counts #^FeatMultinomialSuffStats other))
     feat-fn
     (merge train-opts (.train-opts #^FeatMultinomialSuffStats other))))
-  (to-distribution [this] (train-multinomial feat-fn event-counts train-opts)))
+  (to-distribution [this] 
+      #_(println "event-counts: " event-counts)
+      (let  [res (train-multinomial feat-fn event-counts train-opts)]
+        #_(println "result: " res)
+        res)))
 
 ;;; Factory ;;;
 
@@ -146,16 +156,11 @@
 		  #_[(format "FirstChar:%s" (first x)) 1.0]
 		  #_[(format "LastChar:%s" (last x)) 1.0]]))
 	; Event Counts
-  (def event-counts (counter/normalize {"aria" 1 "s" 1 "baria" 7 "daria" 1}))
+  (def event-counts (counter/normalize {"aria" 0.1 "s" 0.01 "baria" 7 "daria" 1}))
   (seq (double-array [(Math/log 1) (Math/log 7) (Math/log 1) (Math/log 1)]))
   (def ss (distr/obs-counter (new-suff-stats f :sigma-sq 100000)
 			     event-counts))
   (distr/to-distribution ss) 
   ; 
-  (distr/log-prob d "aria")
-  (reduce + (vals d))
-  (println d)
-  (println (distr/make-DirichletMultinomial
-	    :counts (counter/make event-counts)
-	    :lambda 0.0)))
+  )
 

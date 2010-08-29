@@ -87,6 +87,5 @@
 	      ["VP" ["VBD" "jumped"] 
 	       ["PP" ["IN" "over"] 
 		["NP" ["DT" "the"] ["JJ" "lazy"] ["NN" "dog"]]]]])
-  (println (find-head-child (tree/to-tree t))
-  (println (str (find-head-word (tree/to-tree t) find-head-child))))
+  (str (find-head-word (tree/to-tree t) find-head-child))
 )  
