@@ -242,12 +242,16 @@
 ;;; IO-ish ;;;
 
 
-(defn ls [f]
+(defn ls 
+  "list the files in directory f"
+  [f]
   (seq (.listFiles (io/file f))))
 
 ;;; Java Field Set ;;;
 
-(defmacro set-field! [inst field val]
+(defmacro set-field! 
+  "set the field of a java object to a value"
+  [inst field val]
   `(set! (. ~inst ~field) ~val))
 
 
