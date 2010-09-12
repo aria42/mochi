@@ -2,6 +2,9 @@
   (use [mochi core] [mochi.ml distribution]))
 
 
+
+;; Each observation is a key-value map
+;; where keys match distr-map input
 (defrecord IndepJointDistribution [distr-map]
   IDistribution
   (log-prob [this obs-map]
@@ -39,6 +42,8 @@
   (toString [this] (str distr)))
 
 
+;; Generate multiple observations
+;; from the same distribution
 (deftype IndepListSuffStats [suff-stats]
   ISuffStats
   (obs [this os weight]
