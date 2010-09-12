@@ -1,4 +1,3 @@
-
 (ns mochi.search
   {:doc "Generic AI Search Routines; by virtue of generality, this code
    isn't as efficient for any particular problem, but is useful
@@ -68,7 +67,7 @@
 
   (uniform-cost-search
    (GraphPathSearchProblem.
-    {:s [[:a 1.0],[:b 0.5]] :a [[:g 1.0]] :b [[:g 1.0]]} :s :g))
+    {:s [[:a 1.0],[:b 0.5]] :a [[:g 1.0]] :b [[:g 1.0]]} :s :g))w
   
 )
 

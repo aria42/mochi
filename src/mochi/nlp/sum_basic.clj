@@ -8,11 +8,10 @@
 (defn- init-probs [docs] 
   (->> (for [d docs  s (sents d) w (words s)] w)
        (reduce 
-	(fn [cs w] (cntr/inc-count cs w 1)) 
-	(to-transient (cntr/make)))
-       to-persistent!
+	       (fn [cs w] (cntr/inc-count cs w 1)) 
+	       (transient (cntr/make)))
+       persistent!
        cntr/normalize))
-
 
 (defn avg-prob 
   "average unigram prob"
@@ -21,11 +20,12 @@
      (count (words sent))))
 
 (defn- select-sent [f docs so-far]
-  (let [[[dix six sent] _]
-   (find-max (fn [[dix six sent]] (f sent))
-	     (for [[dix d] (su/indexed docs)
-		  [six s] (su/indexed (sents d))
-		  :when (not (so-far [dix six]))] [dix six s]))]
+  (let [[dix six sent]
+         (apply max-key 
+             (fn [[dix six sent]] (f sent))
+      	     (for [[dix d] (su/indexed docs)
+      		         [six s] (su/indexed (sents d))
+      		         :when (not (so-far [dix six]))] [dix six s]))]
     [dix six]))
 
 (defn sq-prob-update [probs sent]
@@ -37,8 +37,7 @@
 	 probs)
 	cntr/normalize))
 
-(deftype SumBasic [sent-score-fn prob-update-fn]
- 
+(deftype SumBasic [sent-score-fn prob-update-fn] 
   ISentExtractorSummarizer
   (summarize
    [this docs num-sents]
@@ -54,7 +53,7 @@
 	     [[:a :b :c]]
 	     [[:b :c] [:d :f]]
 	     [[:d :e]]])
-  (summarize (SumBasic avg-prob sq-prob-update) docs 4)  
+  (summarize (SumBasic. avg-prob sq-prob-update) docs 4)  
 )
   
 

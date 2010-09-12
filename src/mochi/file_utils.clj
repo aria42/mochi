@@ -97,7 +97,7 @@
   (let [temp-file (doto (File/createTempFile "mochi" file-ext) .deleteOnExit)]
     (ds/copy 
         (ClassLoader/getSystemResourceAsStream resource-name) 
-	temp-file)
+	      temp-file)
     temp-file))
 
 (comment

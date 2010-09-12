@@ -42,7 +42,7 @@
 
 (def open-nlp-tokenizer
   (per-thread-singleton 
-       #(-> "opennlp_models/EnglishTok.bin.gz"
+    #(-> "opennlp_models/EnglishTok.bin.gz"
 	    (resource-to-temp-file  ".bin.gz")
 	    (.getAbsolutePath)
 	    (opennlp.tools.lang.english.Tokenizer.)
@@ -77,6 +77,11 @@
   ([txt] (tokenize (open-nlp-tokenizer) txt))
   ([toker-impl txt] (ptb-post-fix (span-tokenize toker-impl txt))))
 
-
+(comment
+  (System/getProperties)
+  (ClassLoader/getSystemResourceAsStream "opennlp_models/EnglishTok.bin.gz") 
+  (open-nlp-tokenizer)
+  (tokenize "Aria is cool.")
+)
 
   

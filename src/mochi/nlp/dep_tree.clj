@@ -60,6 +60,7 @@
   (to-stanford-tree (str t))
   (head-index t)
   (def c (first (tree/children t)))
+  (str c)
   (tree/pre-leaf? c)
   (map head-index (tree/nodes t))
   (to-dep-tree t)
