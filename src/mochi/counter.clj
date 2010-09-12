@@ -141,13 +141,12 @@
   (find-max c)
   (merge-counters c c)
   (log-normalize (inc-count c :a -1.0)) 
-  (log-scores-to-probs (inc-count c :a -1.0))
-  x
+  (log-scores-to-probs (inc-count c :a -1.0))  
   (inc "a")
   (-> (make)
       (inc-count :a 1.0)
       (inc-count :b 2.0)
       (scale 2.0)
-      normalize)
+      normalize)      
   )
 
