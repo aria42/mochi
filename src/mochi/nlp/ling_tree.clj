@@ -1,5 +1,6 @@
 (ns mochi.nlp.ling-tree
-  (:require [mochi [span :as span] [tree :as tree]]
+  (:require [clojure [string :as string]]
+            [mochi [span :as span] [tree :as tree]]
             [mochi.nlp [collins-head-rules :as collins]]))
 
 ;;; --------------------------
@@ -43,6 +44,28 @@
         [(mochi.tree.Tree. label children) (rest remain)]
         (let [[node remain] (tree-from-str remain)]
           (recur (conj children node) remain))))))
+          
+(defn remove-punc [tree]
+  (tree/filter-nodes tree 
+    (fn [node]       
+      (and (tree/pre-leaf? node) (#{"#" "$" "." "," "-LRB-" "-RRB-" "``" "''" ":"} (tree/label node))))
+    false))          
+
+(defn strip-empty [tree]
+  (tree/filter-nodes tree
+   (fn [node]
+     (let [label (tree/label node)]
+       (or (and (tree/leaf? node)  (re-matches #"-.*-" label))
+           (and (tree/pre-leaf? node) (= label "-NONE-")))))
+   false))
+
+(defn standard-transform [tree]
+  (let [tree (strip-empty tree)]
+    (if (not (nil? tree))
+       (->> tree
+         (tree/map-label (fn [#^String  l] (if (-> l .trim empty?) "ROOT" l)))
+         (tree/map-label (fn [l] (string/replace l #"(\w+)-.+$" second))))
+       tree)))       
 
 (defn- trim-init-space [s]
   (drop-while (fn [#^Character c] (Character/isWhitespace  c)) s))

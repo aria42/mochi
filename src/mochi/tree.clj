@@ -13,7 +13,7 @@
 (extend-protocol ITree
 
   clojure.lang.IPersistentVector
-  ; Nested vectors are interepted as trees
+  ; Nested vectors can be interepted as trees
   ; e.g. ["NP" ["DT" "the"] ["NN" "man"]]
   (label [t] (first t))
   (children [t] (if-let [cs (rest t)] cs []))
@@ -62,7 +62,8 @@
   "the label of each pre-leaf node"
   [t]
   (map label (pre-leaves t)))
-
+  
+  
 ;;; Tree Data Type ;;;
 ;;; This supports much more than ITree.
 ;;; Each node is also a map to store more data
@@ -89,6 +90,24 @@
     (last id)
     (if (leaf? t) 0
       (inc (apply max (map depth (children t)))))))
+
+
+
+(defn map-label [label-fn tree]
+  (Tree. (-> tree label label-fn)
+	 (map (partial map-label label-fn) (children tree))))
+
+(defn filter-nodes [tree pred keep-children?]  
+  (letfn [(helper [node]
+	     (let [new-children (mapcat helper (children node))]
+	       (if (pred node)
+		 (if keep-children? new-children [])		  
+		 (if (and (not (leaf? node)) (empty? new-children))
+		   []
+		   [(Tree. (label node) new-children)]))))]
+    (first (helper tree))))  
+
+      
 
 (defn add-ids
   "Returns tree which adds  :id -> [start stop depth] to each node's map. This
@@ -126,6 +145,11 @@ share tree structure."
 
 ;;; Make New Trees ;;;
 
+(defn new-tree 
+  "Make a new tree object"
+  ([label children] (Tree. label children))
+  ([label] (Tree. label [])))
+
 (defn transform [t label-fn]
   (Tree. (label-fn t) (map #(transform % label-fn) (children t))))
 
@@ -155,18 +179,3 @@ share tree structure."
   [t start stop]
   (let [lca (find-lca t start stop)]
     (concat (reverse (path-to lca start)) (rest (path-to lca stop)))))
-
-(comment
-  (ns mochi.tree)
-  (def t (to-tree ["NP" ["NP" ["DT" "The"] ["NN" "man"]] ["NP" ["DT" "here"]]]))
-  (nodes t)
-  (label t) 
-  (str t)
-  (println (str t))
-  (str (to-tree t))
-  (def ls (leaves t))
-  (map str ls)
-  (map label (find-path t (first ls) (last ls)))
-  (yield (find-lca t (first ls) (last ls)))
-  )
-
