@@ -46,14 +46,23 @@
        (let [[dix six] (select-sent (partial sent-score-fn probs) docs summr)]
 	 (recur (conj summr [dix six]) 
 		(prob-update-fn probs (-> docs  (nth dix) sents (nth six)))))
-       summr))))	     
+       summr))))
+
+(defn sum-basic-summarize
+  "each element of docs is a seq of sentences,
+   each sentence is a seq of word strings.
+
+   Returns seq of [doc-index sent-index] of the
+   sentences to use"
+  [docs num-sents]
+  (summarize (SumBasic. avg-prob sq-prob-update) docs num-sents))
 
 (comment
   (def docs [[[:b :c :d]]
 	     [[:a :b :c]]
 	     [[:b :c] [:d :f]]
 	     [[:d :e]]])
-  (summarize (SumBasic. avg-prob sq-prob-update) docs 4)  
+  (sum-basic-summarize docs 2)
 )
   
 

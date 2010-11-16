@@ -48,9 +48,10 @@
 	  (su/indexed (process (slurp f)))))))))  
 
 
-(when *command-line-args* (main))
+
 
 (comment
+  (when *command-line-args* (main))
   (use 'mochi.nlp.process.parser)
   (tokenize "Aria is cool.")
   (def a  (process "Aria is cool. Isn't he?"))

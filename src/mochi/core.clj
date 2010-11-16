@@ -264,3 +264,8 @@
 	index-fn (into {} (map-indexed (fn [i x] [x i]) xs))]
     [xs (fn [x] (get index-fn x -1))]))
 
+(comment
+  (ls ".")
+  #{1 2 3}
+  (ls)
+  )

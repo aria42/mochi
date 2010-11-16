@@ -136,13 +136,13 @@
     (make)
     (take 1e5 (repeatedly (constantly :a)))))
   ;
+  #{ 1 2 }
   (def c (-> (make) (inc-count :a 1.0) (inc-count :b 2.0)))
   (all-counts c)
   (find-max c)
   (merge-counters c c)
   (log-normalize (inc-count c :a -1.0)) 
-  (log-scores-to-probs (inc-count c :a -1.0))  
-  (inc "a")
+  (log-scores-to-probs (inc-count c :a -1.0))     
   (-> (make)
       (inc-count :a 1.0)
       (inc-count :b 2.0)

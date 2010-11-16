@@ -17,6 +17,12 @@
 (defn make-Sentence [toks char-span source]
   (Sentence. toks char-span source))
 
+(defn sent-spans
+  "return vec of [start stop] indices for sentence text"
+  [txt] 
+  (partition 2 1 
+    (concat [0] (.sentPosDetect (open-nlp-sent-split) txt) [(.length txt)])))
+
 (defn split-sents 
   "return vec of sentences"
   [txt] 
@@ -24,16 +30,5 @@
    (fn [[start stop]]
      (let [sent-txt (.substring txt start stop)]	   
        (Sentence. (tokenize sent-txt) [start stop] txt)))
-   (partition 2 1 
-     (concat [0] (.sentPosDetect (open-nlp-sent-split) txt) [(.length txt)]))))
+   (sent-spans txt)))
 
-(defn sent-spans
-  "return vec of sentences"
-  [txt] 
-  (partition 2 1 
-    (concat [0] (.sentPosDetect (open-nlp-sent-split) txt) [(.length txt)])))
-
-(comment
-  (javadoc SentenceDetector)
-  (for [s (split-sents "Aria is cool. Isn't he.")] (for [t (:toks s)] (:word t)))
-)

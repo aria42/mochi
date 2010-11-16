@@ -81,7 +81,9 @@
   (toString [this]
     (if (transient? this)
       (str counts)
-      (-> this events vec str)))
+      (->> (events this)
+           (map (fn [[k v]] (format "%s: %.3f" k (double v))))
+           (apply str))))
 
   clojure.lang.Seqable
   (seq  [this] (events this))
@@ -143,12 +145,10 @@
     (DirichletMultinomial. counts lambda numKeys)))
 
 
-
 ;;; Testing ;;;
-
-(comment
-
-  
+(comment    
+  (inc 1)
+  (inc "1")
   (def d (make-DirichletMultinomial :counts (cntr/make {:a 1.0}) :lambda 1.0))
   (persistent! (obs (transient d) :a 1.0)) 
   (def e (make-DirichletMultinomial :counts (cntr/make {:b 2.0}) :lambda 1.0))

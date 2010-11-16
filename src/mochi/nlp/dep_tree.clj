@@ -1,6 +1,6 @@
 (ns mochi.nlp.dep-tree  
-  (:require [mochi [tree :as tree]]
-    [mochi.nlp [ling-tree :as lt]])  (:import [edu.stanford.nlp.trees EnglishGrammaticalStructure])	     
+  (:require [mochi [tree :as tree]] [mochi.nlp [ling-tree :as lt]])      
+  (:import [edu.stanford.nlp.trees EnglishGrammaticalStructure])	     
   (:use [mochi core]))
 
 (defn- to-stanford-tree
