@@ -63,8 +63,7 @@
 	 (assoc tok :word "``")
 	 ;; Default
 	 :default (throw (RuntimeException. "Isolated Quote")))))))
-	 
-	      
+	 	      
 (defn- ptb-post-fix [toks]
   (for [t (quote-post-fix toks) :let [w (:word t)]]
     (cond 
@@ -78,10 +77,7 @@
   ([toker-impl txt] (ptb-post-fix (span-tokenize toker-impl txt))))
 
 (comment
-  (System/getProperties)
-  (ClassLoader/getSystemResourceAsStream "opennlp_models/EnglishTok.bin.gz") 
-  (open-nlp-tokenizer)
-  (tokenize "Aria is cool.")
+  (tokenize "The quick brown fox jumped over the fence..")
 )
 
   

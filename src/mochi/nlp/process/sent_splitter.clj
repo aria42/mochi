@@ -24,11 +24,15 @@
     (concat [0] (.sentPosDetect (open-nlp-sent-split) txt) [(.length txt)])))
 
 (defn split-sents 
-  "return vec of sentences"
+  "return vec of sentence spans"
   [txt] 
   (map 
    (fn [[start stop]]
      (let [sent-txt (.substring txt start stop)]	   
        (Sentence. (tokenize sent-txt) [start stop] txt)))
    (sent-spans txt)))
+
+(comment
+  (map :toks (split-sents "This is a sentence. There are many like it but this is mine"))
+)
 
