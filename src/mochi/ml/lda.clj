@@ -4,52 +4,54 @@
    topic prior hyper-distributions."
    :author "Aria Haghighi <me@aria42.com>"}
   (:use [mochi.core :only [make-map]]
-        [mochi.sloppy-math :only [digamma]])
+        [mochi.sloppy-math :only [digamma]]
+	[clojure.contrib.def :only [defvar]])
   (:require [mochi.ml.distribution :as distr]
 	    [mochi.counter :as cntr]))
 
-(def *globals*
+(defvar *globals*
      {:vocab-lambda 1.0
       :topic-lambda 1.0
       :K 100
       :random (java.util.Random.)
       :num-iters 10
       :num-inner-esteps 10
-      :doc-topic-lambda 1.0})
+      :doc-topic-lambda 1.0}
+     "globals meant to be redefined during learning")
 
-(defrecord TopicStats [word-counts]
+(defrecord TopicVocabStats [word-counts]
   mochi.ml.distribution.ISuffStats
   (obs [this word weight]
-       (TopicStats. (cntr/inc-count word-counts word weight)))
+       (TopicVocabStats. (cntr/inc-count word-counts word weight)))
   (merge-stats [this other]
-       (TopicStats. (cntr/merge-counters word-counts (:word-counts other))))
+       (TopicVocabStats. (cntr/merge-counters word-counts (:word-counts other))))
   (to-distribution [this]
        (distr/make-DirichletMultinomial
 	:counts word-counts
 	:lambda (-> *globals* :vocab-lambda)
 	:numKeys (count word-counts))))
 
-(defrecord DocStats [topic-counts]
+(defrecord DocTopicStats [topic-counts]
   mochi.ml.distribution.ISuffStats
   (obs [this topic weight]
-       (DocStats. (cntr/inc-count topic-counts topic weight)))
+       (DocTopicStats. (cntr/inc-count topic-counts topic weight)))
   (merge-stats [this other]
-       (TopicStats. (cntr/merge-counters topic-counts (:topic-counts other))))
+       (TopicVocabStats. (cntr/merge-counters topic-counts (:topic-counts other))))
   (to-distribution [this]
-     (let [logZ (digamma (cntr/total-count topic-counts))]
        (->>  (range (:K *globals*))
 	     (make-map
-	       (fn [topic]
-		 (digamma (+ (topic-counts topic) (:topic-lambda *globals*)))))
+	      (fn [topic]
+		(digamma (+ (topic-counts topic) (:topic-lambda *globals*)))))
 	     (cntr/log-scores-to-probs)
 	     second
-	     cntr/all-counts))))
+	     cntr/all-counts)))
 
 (defn new-stats []
-  [(DocStats. {})
-   (make-map (constantly (TopicStats. {})) (range (:K *globals*)))])
+  [(DocTopicStats. {})
+   (make-map (constantly (TopicVocabStats. {})) (range (:K *globals*)))])
 
 (defn word-posterior [word doc-topic-distr topic-vocab-distrs]
+  ; If no topic vocab params, do random E-Step posteriors
   (if (nil? topic-vocab-distrs)
     (->> (range (:K *globals*))
 	 (make-map (fn [_] (-> *globals* :random .nextDouble)))
@@ -77,8 +79,7 @@
 	   posts)
 	(reduce
 	 (fn [res [t post]]
-	   (update-in res [t]
-		      distr/obs word post))
+	   (update-in res [t] distr/obs word post))
 	 topic-word-stats
 	 posts)]))   
    (new-stats)
@@ -88,11 +89,6 @@
   (make-map
    (constantly (/ 1.0 (:K *globals*)))
    (range (:K *globals*))))
-
-(defn init-topic-vocab-stats []
-  (into {}
-    (for [t (:K *globals*)]
-      [t (TopicStats. {})])))
 
 (defn doc-inf [doc topic-vocab-distrs]
   (loop [iter 0
@@ -105,9 +101,10 @@
 	       (distr/to-distribution new-doc-stats))))))
 
 (defn doc-topics [topic-vocab-distrs doc]
-     (-> (doc-inf doc topic-vocab-distrs)
-	 first
-	 distr/to-distribution))
+  (-> doc
+      (doc-inf topic-vocab-distrs)
+      first
+      distr/to-distribution))
 
 (defn global-iter [docs topic-vocab-distrs]
   (->> docs
@@ -124,3 +121,9 @@
 	(recur
 	 (inc iter)
 	 (global-iter docs topic-vocb-distrs)))))
+
+
+(comment
+  (alter-var-root (var *globals*) assoc :K 3)
+  (learn [["a" "b"] ["b" "c"] ["a" "a"]])
+)
