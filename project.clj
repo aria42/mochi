@@ -1,8 +1,12 @@
-(defproject nlputil-clj "1.0-SNAPSHOT"
+(defproject nlputil-clj "1.1-SNAPSHOT"
   :dependencies 
   [[org.clojars.pjt/opennlp-tools "1.4.3"]
     [org.clojure/clojure "1.2.0"]
-    [org.clojure/clojure-contrib "1.2.0"]]
-  :aot [mochi.nlp.process.tokenizer.Token]
-   :dev-dependencies
-   [[swank-clojure "1.2.1"]])
+    [org.clojure/clojure-contrib "1.2.0"]
+    [clj-sys/plumbing "0.1.3-SNAPSHOT"]]
+  :aot [mochi.nlp.process.tokenizer]
+  :dev-dependencies [[swank-clojure "1.2.1"]]
+  :repositories  {"apache" "https://repository.apache.org/content/repositories/releases/"
+                  "snapshots" "http://mvn.getwoven.com/repos/woven-public-snapshots"
+                  "releases" "http://mvn.getwoven.com/repos/woven-public-releases"})
+   

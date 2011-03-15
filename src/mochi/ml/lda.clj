@@ -69,7 +69,7 @@
 	 second
 	 cntr/all-counts)))
 
-(defn doc-estep [doc doc-topic-distr topic-vocab-distrs]
+(defn doc-estep [get-tokens doc doc-topic-distr topic-vocab-distrs]
   (reduce
    (fn [[doc-stats topic-word-stats] word]
      (let [posts (word-posterior word doc-topic-distr topic-vocab-distrs)]
@@ -83,18 +83,18 @@
 	 topic-word-stats
 	 posts)]))   
    (new-stats)
-   doc))
+   (get-tokens doc)))
 
 (defn init-doc-topic-distr []
   (make-map
    (constantly (/ 1.0 (:K *globals*)))
    (range (:K *globals*))))
 
-(defn doc-inf [doc topic-vocab-distrs]
+(defn doc-inf [get-tokens doc topic-vocab-distrs]
   (loop [iter 0
 	 doc-topic-distr (init-doc-topic-distr)]
     (let [[new-doc-stats new-vocab-stats]
-	  (doc-estep doc doc-topic-distr topic-vocab-distrs)]
+	  (doc-estep get-tokens doc doc-topic-distr topic-vocab-distrs)]
       (if (= iter (:num-inner-esteps *globals*))
 	[new-doc-stats new-vocab-stats]
 	(recur (inc iter)
@@ -106,24 +106,23 @@
       first
       distr/to-distribution))
 
-(defn global-iter [docs topic-vocab-distrs]
+(defn global-iter [get-tokens docs topic-vocab-distrs]
   (->> docs
-       (pmap (fn [doc] (second (doc-inf doc topic-vocab-distrs))))
+       (pmap (fn [doc] (second (doc-inf get-tokens doc topic-vocab-distrs))))
        (reduce (partial merge-with distr/merge-stats))
        (pmap
 	(fn [[topic stats]] [topic (distr/to-distribution stats)]))
        (into {})))
 
-(defn learn [docs]
+(defn learn [get-tokens docs]
   (loop [iter 0 topic-vocb-distrs nil]
     (if (= iter (:num-iters *globals*))
         topic-vocb-distrs
 	(recur
 	 (inc iter)
-	 (global-iter docs topic-vocb-distrs)))))
-
+	 (global-iter get-tokens docs topic-vocb-distrs)))))
 
 (comment
   (alter-var-root (var *globals*) assoc :K 3)
-  (learn [["a" "b"] ["b" "c"] ["a" "a"]])
+  (learn identity [["a" "b"] ["b" "c"] ["a" "a"]])
 )
