@@ -28,11 +28,8 @@
   [txt] 
   (map 
    (fn [[start stop]]
-     (let [sent-txt (.substring txt start stop)]	   
-       (Sentence. (tokenize sent-txt) [start stop] txt)))
+     (let [sent-txt (.substring txt start stop)]
+       sent-txt ))
    (sent-spans txt)))
 
-(comment
-  (map :toks (split-sents "This is a sentence. There are many like it but this is mine"))
-)
 
