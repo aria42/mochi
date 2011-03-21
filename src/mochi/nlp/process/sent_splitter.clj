@@ -27,9 +27,7 @@
   "return vec of sentence spans"
   [txt] 
   (map 
-   (fn [[start stop]]
-     (let [sent-txt (.substring txt start stop)]
-       sent-txt ))
+   (fn [[start stop]] (.substring txt start stop))
    (sent-spans txt)))
 
 
