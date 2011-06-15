@@ -5,12 +5,12 @@
    [mochi core file-utils]
    [mochi.nlp.process tokenizer]))
 
-(def- open-nlp-sent-split
+(def- ^SentenceDetector open-nlp-sent-split
      (per-thread-singleton
       #(-> "opennlp_models/eng-sent-seg.bin.gz"
 	   (resource-to-temp-file  ".bin.gz")
 	   (.getAbsolutePath)
-	   (opennlp.tools.lang.english.SentenceDetector.))))
+	   (SentenceDetector.))))
 
 (defrecord Sentence [toks char-span source])
 
