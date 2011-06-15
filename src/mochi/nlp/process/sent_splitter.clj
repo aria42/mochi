@@ -19,13 +19,13 @@
 
 (defn sent-spans
   "return vec of [start stop] indices for sentence text"
-  [txt] 
+  [^String txt] 
   (partition 2 1 
     (concat [0] (.sentPosDetect (open-nlp-sent-split) txt) [(.length txt)])))
 
 (defn split-sents 
   "return vec of sentence spans"
-  [txt] 
+  [^String txt] 
   (map 
    (fn [[start stop]] (.substring txt start stop))
    (sent-spans txt)))
