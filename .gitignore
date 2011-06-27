@@ -4,3 +4,4 @@ execs/**
 lib/**
 *.iml
 *~
+classes/**
