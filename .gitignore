@@ -5,3 +5,5 @@ lib/**
 *.iml
 *~
 classes/**
+*.jar
+pom.xml
